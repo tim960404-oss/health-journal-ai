@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>智慧健康日誌</title>
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --surface: #161a23;
+      --card: #1e2330;
+      --border: #2a3040;
+      --accent-low: #22c55e;
+      --accent-mid: #f59e0b;
+      --accent-high: #ef4444;
+      --accent-blue: #3b82f6;
+      --text: #e2e8f0;
+      --text-muted: #64748b;
+      --sidebar-w: 220px;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 28px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+    }
+    .sidebar-logo {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent-blue);
+      margin-bottom: 20px;
+      padding-left: 8px;
+      letter-spacing: -0.3px;
+    }
+    .sidebar-logo span { color: var(--text-muted); font-weight: 400; font-size: 0.75rem; display: block; margin-top: 2px; }
+    .nav-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      text-align: left;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-btn:hover, .nav-btn.active {
+      background: var(--card);
+      color: var(--text);
+    }
+    .nav-btn.active { color: var(--accent-blue); }
+
+    /* Main */
+    .main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      padding: 32px;
+      max-width: 1100px;
+    }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 6px; }
+    .subtitle { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 28px; }
+
+    /* Risk Badge */
+    .risk-banner {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .risk-dot {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; font-weight: 800;
+      flex-shrink: 0;
+    }
+    .risk-dot.LOW { background: rgba(34,197,94,0.15); color: var(--accent-low); border: 2px solid var(--accent-low); }
+    .risk-dot.MEDIUM { background: rgba(245,158,11,0.15); color: var(--accent-mid); border: 2px solid var(--accent-mid); }
+    .risk-dot.HIGH { background: rgba(239,68,68,0.15); color: var(--accent-high); border: 2px solid var(--accent-high); }
+    .risk-dot.NO_DATA { background: rgba(100,116,139,0.15); color: var(--text-muted); border: 2px solid var(--border); }
+    .risk-info h2 { font-size: 1.1rem; font-weight: 600; }
+    .risk-info p { color: var(--text-muted); font-size: 0.85rem; margin-top: 4px; }
+
+    /* Stats Row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .stat-label { color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-value { font-size: 1.8rem; font-weight: 700; margin-top: 6px; }
+    .stat-unit { font-size: 0.8rem; color: var(--text-muted); }
+
+    /* Table */
+    .table-wrap {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .table-header h3 { font-size: 1rem; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px 20px; text-align: left; font-size: 0.88rem; }
+    th { color: var(--text-muted); font-weight: 500; background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border); }
+    tr:not(:last-child) td { border-bottom: 1px solid var(--border); }
+    tr:hover td { background: rgba(255,255,255,0.025); }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .badge.LOW { background: rgba(34,197,94,0.15); color: var(--accent-low); }
+    .badge.MEDIUM { background: rgba(245,158,11,0.15); color: var(--accent-mid); }
+    .badge.HIGH { background: rgba(239,68,68,0.15); color: var(--accent-high); }
+
+    .action-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      margin-right: 6px;
+      transition: all 0.15s;
+    }
+    .action-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+    .action-btn.del:hover { border-color: var(--accent-high); color: var(--accent-high); }
+
+    /* Add Button */
+    .btn-primary {
+      background: var(--accent-blue);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      width: 420px;
+      max-width: 95vw;
+    }
+    .modal h3 { font-size: 1.1rem; margin-bottom: 20px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px; }
+    .form-group input {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-group input:focus { border-color: var(--accent-blue); }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    .btn-cancel {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 9px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .btn-cancel:hover { border-color: var(--text-muted); color: var(--text); }
+
+    /* Chart page */
+    .chart-container {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .chart-container h3 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; }
+    canvas { width: 100% !important; }
+
+    /* Decision Tree Display */
+    .tree-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.83rem;
+      line-height: 1.8;
+      color: var(--text-muted);
+    }
+    .tree-card .node { color: var(--accent-blue); }
+    .tree-card .leaf-low { color: var(--accent-low); font-weight: 700; }
+    .tree-card .leaf-mid { color: var(--accent-mid); font-weight: 700; }
+    .tree-card .leaf-high { color: var(--accent-high); font-weight: 700; }
+
+    /* Empty state */
+    .empty { text-align: center; padding: 48px; color: var(--text-muted); }
+    .empty .icon { font-size: 2.5rem; margin-bottom: 12px; }
+
+    /* Responsive */
+    @media (max-width: 700px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; padding: 20px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    健康日誌
+    <span>Risk Assessment AI</span>
+  </div>
+  <button class="nav-btn active" onclick="showPage('dashboard', this)">📊 儀表板</button>
+  <button class="nav-btn" onclick="showPage('logs', this)">📋 紀錄管理</button>
+  <button class="nav-btn" onclick="showPage('chart', this)">📈 趨勢圖表</button>
+  <button class="nav-btn" onclick="showPage('tree', this)">🌲 決策樹</button>
+</nav>
+
+<!-- Main -->
+<main class="main">
+
+  <!-- Dashboard Page -->
+  <section class="page active" id="page-dashboard">
+    <h1>健康儀表板</h1>
+    <p class="subtitle">即時監控您的健康風險等級</p>
+
+    <div class="risk-banner">
+      <div class="risk-dot NO_DATA" id="risk-dot">?</div>
+      <div class="risk-info">
+        <h2 id="risk-title">載入中...</h2>
+        <p id="risk-desc">正在從最新紀錄計算風險等級</p>
+      </div>
+    </div>
+
+    <div class="stats-row" id="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">最新睡眠</div>
+        <div class="stat-value" id="stat-sleep">—</div>
+        <div class="stat-unit">小時</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">最新步數</div>
+        <div class="stat-value" id="stat-steps">—</div>
+        <div class="stat-unit">步</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">最新心情</div>
+        <div class="stat-value" id="stat-mood">—</div>
+        <div class="stat-unit">/ 10 分</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">總紀錄筆數</div>
+        <div class="stat-value" id="stat-count">—</div>
+        <div class="stat-unit">筆</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Logs Page -->
+  <section class="page" id="page-logs">
+    <h1>健康紀錄</h1>
+    <p class="subtitle">管理您每日的健康數據</p>
+
+    <div class="table-wrap">
+      <div class="table-header">
+        <h3>所有紀錄</h3>
+        <button class="btn-primary" onclick="openAddModal()">＋ 新增紀錄</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>日期</th>
+            <th>睡眠(hr)</th>
+            <th>步數</th>
+            <th>心情</th>
+            <th>風險等級</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="logs-tbody">
+          <tr><td colspan="6" class="empty"><div class="icon">💤</div>暫無紀錄</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Chart Page -->
+  <section class="page" id="page-chart">
+    <h1>趨勢圖表</h1>
+    <p class="subtitle">過去紀錄的健康數據走勢</p>
+    <div class="chart-container">
+      <h3>睡眠時數趨勢</h3>
+      <canvas id="chart-sleep" height="180"></canvas>
+    </div>
+    <div class="chart-container">
+      <h3>步數趨勢</h3>
+      <canvas id="chart-steps" height="180"></canvas>
+    </div>
+    <div class="chart-container">
+      <h3>心情分數趨勢</h3>
+      <canvas id="chart-mood" height="180"></canvas>
+    </div>
+  </section>
+
+  <!-- Decision Tree Page -->
+  <section class="page" id="page-tree">
+    <h1>決策樹邏輯</h1>
+    <p class="subtitle">系統用以下多層決策樹判斷健康風險等級</p>
+    <div class="tree-card">
+<span class="node">ROOT: 睡眠時數 (sleep_hours)</span>
+├── &lt; 6 小時
+│   ├── <span class="node">步數 (steps)</span>
+│   │   ├── &lt; 3000
+│   │   │   └── <span class="leaf-high">🔴 HIGH（高風險）</span>
+│   │   └── ≥ 3000
+│   │       ├── <span class="node">心情分數 (mood_score)</span>
+│   │       │   ├── ≤ 4 → <span class="leaf-high">🔴 HIGH（高風險）</span>
+│   │       │   └── &gt; 4 → <span class="leaf-mid">🟡 MEDIUM（中風險）</span>
+└── ≥ 6 小時
+    ├── <span class="node">步數 (steps)</span>
+    │   ├── &lt; 5000 → <span class="leaf-mid">🟡 MEDIUM（中風險）</span>
+    │   └── ≥ 5000
+    │       ├── <span class="node">心情分數 (mood_score)</span>
+    │       │   ├── ≥ 6 → <span class="leaf-low">🟢 LOW（低風險）</span>
+    │       │   └── &lt; 6 → <span class="leaf-mid">🟡 MEDIUM（中風險）</span>
+    </div>
+    <br/>
+    <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.7;">
+      此決策樹先判斷睡眠時數，再依步數，最後依心情分數，形成三層判斷，
+      自動輸出低 / 中 / 高風險等級並存入資料庫。
+    </p>
+  </section>
+
+</main>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h3 id="modal-title">新增健康紀錄</h3>
+    <input type="hidden" id="edit-id" />
+    <div class="form-group">
+      <label>日期（YYYY-MM-DD）</label>
+      <input type="date" id="input-date" />
+    </div>
+    <div class="form-group">
+      <label>睡眠時數（例如 7.5）</label>
+      <input type="number" id="input-sleep" step="0.5" min="0" max="24" placeholder="7.5" />
+    </div>
+    <div class="form-group">
+      <label>步數（整數）</label>
+      <input type="number" id="input-steps" min="0" placeholder="8000" />
+    </div>
+    <div class="form-group">
+      <label>心情分數（1～10）</label>
+      <input type="number" id="input-mood" min="1" max="10" placeholder="7" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">取消</button>
+      <button class="btn-primary" onclick="submitLog()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+  const API = '/health-logs';
+  let allLogs = [];
+  let sleepChart, stepsChart, moodChart;
+
+  // Navigation
+  function showPage(name, btn) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    if (btn) btn.classList.add('active');
+    if (name === 'chart') renderCharts();
+  }
+
+  // Fetch all logs
+  async function fetchLogs() {
+    const res = await fetch(API);
+    allLogs = await res.json();
+    renderTable();
+    renderDashboard();
+    return allLogs;
+  }
+
+  // Render table
+  function renderTable() {
+    const tbody = document.getElementById('logs-tbody');
+    if (!allLogs.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty"><div class="icon">💤</div>暫無紀錄，請新增</td></tr>';
+      return;
+    }
+    const sorted = [...allLogs].sort((a,b) => b.logDate.localeCompare(a.logDate));
+    tbody.innerHTML = sorted.map(log => `
+      <tr>
+        <td>${log.logDate}</td>
+        <td>${log.sleepHours}</td>
+        <td>${log.steps.toLocaleString()}</td>
+        <td>${log.moodScore}</td>
+        <td><span class="badge ${log.riskLevel}">${riskLabel(log.riskLevel)}</span></td>
+        <td>
+          <button class="action-btn" onclick="openEditModal(${log.id})">編輯</button>
+          <button class="action-btn del" onclick="deleteLog(${log.id})">刪除</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function riskLabel(r) {
+    return { LOW: '🟢 低風險', MEDIUM: '🟡 中風險', HIGH: '🔴 高風險' }[r] || r;
+  }
+
+  // Render dashboard
+  async function renderDashboard() {
+    const res = await fetch(API + '/risk');
+    const data = await res.json();
+    const risk = data.risk_level;
+
+    const dot = document.getElementById('risk-dot');
+    const title = document.getElementById('risk-title');
+    const desc = document.getElementById('risk-desc');
+
+    dot.className = 'risk-dot ' + risk;
+    const map = {
+      LOW: { sym: '✓', title: '低風險', desc: '您目前的健康狀況良好，繼續保持！' },
+      MEDIUM: { sym: '!', title: '中風險', desc: '部分指標需要注意，建議改善睡眠或增加活動。' },
+      HIGH: { sym: '✕', title: '高風險', desc: '健康指標偏低，建議盡快諮詢醫療人員。' },
+      NO_DATA: { sym: '?', title: '尚無資料', desc: '請先新增健康紀錄以計算風險等級。' }
+    };
+    const m = map[risk] || map.NO_DATA;
+    dot.textContent = m.sym;
+    title.textContent = m.title;
+    desc.textContent = m.desc;
+
+    if (allLogs.length) {
+      const latest = [...allLogs].sort((a,b) => b.logDate.localeCompare(a.logDate))[0];
+      document.getElementById('stat-sleep').textContent = latest.sleepHours;
+      document.getElementById('stat-steps').textContent = latest.steps.toLocaleString();
+      document.getElementById('stat-mood').textContent = latest.moodScore;
+    }
+    document.getElementById('stat-count').textContent = allLogs.length;
+  }
+
+  // Charts
+  function renderCharts() {
+    const sorted = [...allLogs].sort((a,b) => a.logDate.localeCompare(b.logDate)).slice(-30);
+    const labels = sorted.map(l => l.logDate.slice(5));
+    const gridColor = 'rgba(255,255,255,0.05)';
+    const tickColor = '#64748b';
+
+    const cfg = (label, data, color) => ({
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{ label, data, borderColor: color, backgroundColor: color + '20',
+          fill: true, tension: 0.3, pointRadius: 3 }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: gridColor }, ticks: { color: tickColor } },
+          y: { grid: { color: gridColor }, ticks: { color: tickColor } }
+        }
+      }
+    });
+
+    if (sleepChart) sleepChart.destroy();
+    if (stepsChart) stepsChart.destroy();
+    if (moodChart) moodChart.destroy();
+
+    sleepChart = new Chart(document.getElementById('chart-sleep'), cfg('睡眠時數', sorted.map(l=>l.sleepHours), '#3b82f6'));
+    stepsChart = new Chart(document.getElementById('chart-steps'), cfg('步數', sorted.map(l=>l.steps), '#22c55e'));
+    moodChart = new Chart(document.getElementById('chart-mood'), cfg('心情分數', sorted.map(l=>l.moodScore), '#f59e0b'));
+  }
+
+  // Modal
+  function openAddModal() {
+    document.getElementById('modal-title').textContent = '新增健康紀錄';
+    document.getElementById('edit-id').value = '';
+    document.getElementById('input-date').value = new Date().toISOString().slice(0,10);
+    document.getElementById('input-sleep').value = '';
+    document.getElementById('input-steps').value = '';
+    document.getElementById('input-mood').value = '';
+    document.getElementById('modal-overlay').classList.add('show');
+  }
+
+  function openEditModal(id) {
+    const log = allLogs.find(l => l.id === id);
+    if (!log) return;
+    document.getElementById('modal-title').textContent = '編輯健康紀錄';
+    document.getElementById('edit-id').value = id;
+    document.getElementById('input-date').value = log.logDate;
+    document.getElementById('input-sleep').value = log.sleepHours;
+    document.getElementById('input-steps').value = log.steps;
+    document.getElementById('input-mood').value = log.moodScore;
+    document.getElementById('modal-overlay').classList.add('show');
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('show');
+  }
+
+  async function submitLog() {
+    const id = document.getElementById('edit-id').value;
+    const body = {
+      logDate: document.getElementById('input-date').value,
+      sleepHours: parseFloat(document.getElementById('input-sleep').value),
+      steps: parseInt(document.getElementById('input-steps').value),
+      moodScore: parseInt(document.getElementById('input-mood').value)
+    };
+    if (!body.logDate || isNaN(body.sleepHours) || isNaN(body.steps) || isNaN(body.moodScore)) {
+      alert('請填寫所有欄位');
+      return;
+    }
+    if (id) {
+      await fetch(API + '/' + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    } else {
+      await fetch(API, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    }
+    closeModal();
+    fetchLogs();
+  }
+
+  async function deleteLog(id) {
+    if (!confirm('確定要刪除這筆紀錄嗎？')) return;
+    await fetch(API + '/' + id, { method: 'DELETE' });
+    fetchLogs();
+  }
+
+  // Init
+  fetchLogs();
+</script>
+</body>
+</html>
